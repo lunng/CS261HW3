@@ -33,7 +33,6 @@ int main(){
    M=20;
    for(i=0;i<M;i++) {
       addSkipList(slst1, rand()%101);
-      printSkipList(slst1);
    }
    for(i=0;i<M;i++) addSkipList(slst2, rand()%101);
 
@@ -156,7 +155,8 @@ param: current -- pointer to a place in the list where the new element should be
 param: e       -- the value to create a link for
 pre:	current is not NULL
 post: a link to store the value */
-struct skipLink* skipLinkAdd(struct skipLink * current, TYPE e) {
+
+/*struct skipLink* skipLinkAdd(struct skipLink * current, TYPE e) {
    struct skipLink* temp;
    struct skipLink* prev;
    if(current->down == NULL){
@@ -172,7 +172,7 @@ struct skipLink* skipLinkAdd(struct skipLink * current, TYPE e) {
    }
    else{
       printf("== in skipLinkAdd recursive call; e = %g\n", e);
-      temp = current;
+      temp = current->down; 
       while(temp->next != NULL && LT(temp->next->value, e)){
 	 temp = temp->next;
       }
@@ -180,9 +180,33 @@ struct skipLink* skipLinkAdd(struct skipLink * current, TYPE e) {
       temp->next = newLink;
       return newLink;
    }
+    FIXME *//*
+}
+*/
+
+/* Add a new skip link recursively - new test function
+param: current -- pointer to a place in the list where the new element should be inserted
+param: e       -- the value to create a link for
+pre:	current is not NULL
+post: a link to store the value */
+struct skipLink* skipLinkAdd(struct skipLink * current, TYPE e) {
+   struct skipLink* prev;
+   struct skipLink * newLink;
+   while(current->next != NULL && LT(current->next->value, e)){
+      prev = current;
+      current = current->next;
+   }
+   if(current->down == NULL){
+      newLink = newSkipLink(e, current->next, NULL);
+      current->next = newLink;
+   }
+   else{
+      newLink = newSkipLink(e, current->next, skipLinkAdd(current->down, e));
+      current->next = newLink;
+   }
+   return newLink;
    /* FIXME */
 }
-
 
 /* ************************************************************************
    Public Functions
@@ -209,33 +233,29 @@ post: returns true or false  */
 int containsSkipList(struct skipList *slst, TYPE e)
 {
    printf("\n== in containsSkipList\n");
-   printSkipList(slst);
    if(slst == NULL){
       return 0;
    }
    struct skipLink* temp = slst->topSentinel;
-   while(temp->down != NULL && temp->next != NULL){
-      if(LT(temp->next->value, e)) {
-	 printf("contains moved right to %g\n", temp->next->value);
-         temp = temp->next;
-      }
-      else if(EQ(temp->next->value, e)){
+   while(temp->down != NULL || temp->next != NULL){
+      if(temp->next != NULL && EQ(e, temp->next->value)){
          return 1;
       }
-      else{ 
-	 printf("contains moved down to %g\n", temp->down->value);
-	 temp = temp->down;
-      }
       if(temp->next == NULL){
-         printf("temp->next == NULL\n");
+         temp = temp->down;
+	 continue;
       }
-      if(temp->down == NULL){
-         printf("temp->down == NULL\n");
+      if(temp->down == NULL && LT(e, temp->next->value)){
+         return 0;
       }
-   }
-   while(temp->next != NULL && LT(temp->next->value, e)){
-      if(EQ(temp->next->value, e)) return 1;
-      temp = temp->next;
+      if(temp->next != NULL && LT(temp->next->value, e)){
+         temp = temp->next;
+	 continue;
+      }
+      if(temp->next != NULL && LT(e, temp->next->value)){
+         temp = temp->down;
+	 continue;
+      }
    }
    return 0;
    /* FIXME */
@@ -247,7 +267,7 @@ param: slst -- pointer to the skip list
 param: e -- element to be removed
 pre:   slst is not null
 post:  the new element is removed from all internal sorted lists */
-void removeSkipList(struct skipList *slst, TYPE e)
+/*void removeSkipList(struct skipList *slst, TYPE e)
 {
    assert(slst != NULL);
    if(!containsSkipList(slst, e)){
@@ -260,13 +280,13 @@ void removeSkipList(struct skipList *slst, TYPE e)
       if(temp->next == NULL){
          temp = temp->down;
       }
-      else if(LT(e, temp->next->value)){
+      else if(temp->next != NULL && LT(e, temp->next->value)){
          temp = temp->down;
       }
-      else if(LT(temp->next->value, e)){
+      else if(temp->next != NULL && LT(temp->next->value, e)){
          temp = temp->next;
       }
-      else if(EQ(e, temp->next->value)){
+      if(temp->next != NULL && EQ(e, temp->next->value)){
 	 temp2 = temp->next;
 	 temp->next = temp->next->next;
 	 free(temp2); 
@@ -277,7 +297,7 @@ void removeSkipList(struct skipList *slst, TYPE e)
    }
    else if(temp->down == NULL){
       while(temp != NULL){
-	 if(EQ(temp->next->value, e)){
+	 if(temp->next != NULL && EQ(temp->next->value, e)){
 	    temp2 = temp->next;
 	    temp->next = temp->next->next;
 	    free(temp2);
@@ -285,12 +305,30 @@ void removeSkipList(struct skipList *slst, TYPE e)
 	 temp = temp->next;
       }
    }
-
+}*/
    /* FIXME */
 
+void removeSkipList(struct skipList *slst, TYPE e)
+{
+   assert(slst != NULL);
+   if(!containsSkipList(slst, e)){
+      return;
+   }
+   struct skipLink* temp;
+   struct skipLink* freeLink;
+   temp = slst->topSentinel;
+   while(temp != NULL){
+      while(temp->next != NULL && LT(temp->next->value, e)){
+	 temp = temp->next;
+      }
+      if(EQ(temp->next->value, e)){
+         freeLink = temp->next;
+	 temp->next = temp->next->next;
+	 free(freeLink);
+      }
+      temp = temp->down; 
+   }
 }
-
-
 
 
 /* Add a new element to the skip list:
@@ -316,7 +354,7 @@ void addSkipList(struct skipList *slst, TYPE e)
 
    if(counter > n_lists){
       for(i = 0; i < counter - n_lists; i++){
-         addTopSentinel(slst);
+	 addTopSentinel(slst);
       }
    }
    temp = slst->topSentinel;
@@ -329,8 +367,8 @@ void addSkipList(struct skipList *slst, TYPE e)
       temp = temp->next;
    }
 
-   temp->next = skipLinkAdd(temp, e);
-
+   skipLinkAdd(temp, e);
+   printSkipList(slst);
    /* FIXME */
 
 }
@@ -360,6 +398,7 @@ pre:	slst is not null and slst is not empty
 post: the links in the skip list are printed breadth-first, top-down */
 void printSkipList(struct skipList *slst)
 {
+   printf("== in print skiplist\n");
    struct skipLink* sentTemp = slst->topSentinel;
    struct skipLink* listTemp = slst->topSentinel;
    while(sentTemp != NULL){
@@ -371,6 +410,7 @@ void printSkipList(struct skipList *slst)
       printf("\n");
       sentTemp = sentTemp->down;
    }
+   printf("\n");
 
    /* FIXME*/
 
