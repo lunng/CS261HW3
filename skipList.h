@@ -43,6 +43,8 @@ void printSkipList(struct skipList *slst);
 void mergeSkipList(struct skipList *slst1, struct skipList *slst2);
 void diffSkipList(struct skipList *slst1, struct skipList *slst2);
 void addTopSentinel(struct skipList* slst);
+int isEqual(struct skipLink * test, TYPE e);
+void freeSkipList(struct skipList* slst);
 
 /* internal routines */
 int flipSkipLink(); /* returns 1 or 0 randomly */
